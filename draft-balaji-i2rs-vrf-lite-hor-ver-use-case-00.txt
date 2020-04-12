@@ -1,0 +1,1285 @@
+ 
+
+
+
+I2RS Working Group                            Balaji Venkat Venkataswami
+INTERNET DRAFT                                                      
+Intended Status: Informational RFC                                      
+Expires: October 5, 2013                                   April 3, 2013
+
+
+Vertical / Horizontal dissemination of VRF-Lite Provisioning / Policies
+             draft-balaji-i2rs-vrf-lite-hor-ver-use-case-00
+
+
+Abstract
+
+   The concept of nodes in a network being provisioned through i2rs
+   applications with clients and agents as the middleware is introduced
+   in [DRAFT-IETF-I2RS-FWK]. An important case in point is that the
+   provisioning of plain old routing through such means can be a
+   powerful abstraction. A use case in this regard is the provisioning
+   of VRF-Lite which lends itself easily to this concept. Normally i2rs
+   recommends vertical (north-south) provisioning of policies from
+   applications through the middleware onto the north-bound APIs
+   provided by the RIB, Routing Control Planes such as BGP, OSPF etc.
+   This document entails tying up such north-south provisioning with
+   east-west dissemination of such provisioned constructs to enable
+   easier control of the flow of information from a center point such as
+   the CE in a VRF-Lite scenario.
+
+
+
+Status of this Memo
+
+   This Internet-Draft is submitted to IETF in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as
+   Internet-Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at
+   http://www.ietf.org/1id-abstracts.html
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 1]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+Copyright and License Notice
+
+   Copyright (c) 2013 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document. Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document. Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+
+Table of Contents
+
+   1  Introduction  . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.1  Terminology . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Scalability factor . . . . . . . . . . . . . . . . . . . . . .  3
+     2.1 Pre-requisite is the default routing table configuration . .  4
+       2.1.1 Not all Interfaces need to be configured . . . . . . . .  4
+     2.2 Routing and Policy information elements  . . . . . . . . . .  5
+       2.1.1 Conveying the provisioning and policy east-west  . . . .  6
+       2.1.2 Centrality of the CE . . . . . . . . . . . . . . . . . .  6
+       2.1.3 Use of BGP to convey policy constructs . . . . . . . . .  7
+     2.2 The User Interface . . . . . . . . . . . . . . . . . . . . .  7
+       2.2.1 Redundancy in links  . . . . . . . . . . . . . . . . . .  7
+       2.2.2 PE to CE interactions  . . . . . . . . . . . . . . . . .  7
+       2.2.3 Agents and the BGP control plane . . . . . . . . . . . .  7
+       2.2.4 At the CE device . . . . . . . . . . . . . . . . . . . .  9
+       2.2.5 CE and South of CE . . . . . . . . . . . . . . . . . . . 10
+       2.2.6 Configuration / Policy stream in XML . . . . . . . . . . 10
+         2.2.6.1 VRF configuration information  . . . . . . . . . . . 10
+         2.2.6.2 Policy Based Routing and others  . . . . . . . . . . 16
+         2.2.6.3 Language Constructs translated to XML  . . . . . . . 19
+         2.2.6.4 Application overlay over this infrastructure . . . . 22
+   3  Security Considerations . . . . . . . . . . . . . . . . . . . . 23
+   4  IANA Considerations . . . . . . . . . . . . . . . . . . . . . . 23
+   5  References  . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+     5.1  Normative References  . . . . . . . . . . . . . . . . . . . 23
+     5.2  Informative References  . . . . . . . . . . . . . . . . . . 23
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 23
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 2]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+1  Introduction
+
+   North-south provisioning of policies in the routing control plane and
+   in the Routing Information Base is outlined in the i2rs framework and
+   architecture documents. Applications with awareness of such policies
+   whether they be SDN controllers or specialized applications such as
+   Network Provisioning Entities push down the policies through the
+   client-agent middleware and onto the North-bound APIs exported by the
+   RIB and control planes that exist on routers today. This is a
+   powerful abstraction that creates room for many policies to be
+   programmed to the routing layer and onto the RIB and FIB (Forwarding
+   Information Base).
+
+   This document outlines the result of such north-south interactions
+   with east-west interactions that are a direct result of the north-
+   south policy thrust. The object of this north-south policy thrust
+   could be one central entity. A case in point is the VRF-Lite CE
+   (Customer Equipment). Once the provisioning of the networks and its
+   related policies are thrust to the CE there could east-west
+   interactions between the CE and the PE and the south-of-CE equipment.
+   This lateral / horizontal push would create the necessary state in
+   the legacy protocols that are operating in the PE and the south of CE
+   equipment.
+
+   VRF-Lite is deployed in a wide variety of circumstances and lends
+   itself easily to such lateral / horizontal push that comes as a
+   direct result of the north-south interaction with say an SDN
+   controller that is programmed to thrust such network provisioning
+   constructs and its related policies to the CE.
+
+   This document examines this use case in more detail and provides a
+   sufficiently broad justification for the provisioning of networks in
+   a scalable and more controlled manner.
+
+1.1  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119].
+
+
+2.  Scalability factor
+
+
+   If the product of an abstraction that entails north-south thrust from
+   a i2rs Application like an SDN controller is to be scalable in its
+   interactions with the entities that it controls, there should be a
+   single point of provisioning and a single dissemination container in
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 3]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   the north-south direction. It could be tolerable that there exist a
+   few such containers a.k.a nodes in the network. But when the number
+   of such devices / containers multiply beyond a point thrusting
+   information in the north-south direction in each of the device
+   contexts becomes a scalability issue.
+
+   Assume the topology in a VRF-Lite network where there exist multiple
+   entities a.k.a nodes south of CE and assume these nodes are to be
+   provisioned with the information / configuration relative to
+   themselves with respect to their interface IP addresses and networks
+   they need to include in their routing plane interactions through say
+   BGP or OSPF, the configuration push for all these entities as to the
+   VLAN separation, route leaking for shared services etc. becomes an
+   overwhelming task. Finer subnet separation as the south of CE
+   topology expands needs to be thought thoroughly and pushed to these
+   devices one at a time through a control connection that is out-of-
+   band from the regular data path. Provisioning such control
+   connections and wiring them up could be a tedious task when lateral
+   insertion of such information and policies can be done from a key
+   entity in the topology. In the case of the VRF-Lite use case this key
+   entity could be the CE. 
+
+   Assume BGP is being run as the control protocol of choice between the
+   CE and its south of CE topology of nodes. It would be most
+   appropriate that the north-south interactions happen between the
+   Provisioning entity and the CE and the CE then laterally makes a
+   east-west push of such provisioned information to the south of CE
+   nodes. Basic connectivity of interface configuration a.k.a IP
+   addresses and their subnet masks could be provisioned through manual
+   means initially say through static means. Routing plane
+   configurations can be gotten from the east-west push. The
+   dissemination of such information could be from hop to hop extending
+   from the CE to the south of CE devices.
+
+   With the minimal connectivity of CE to south of CE devices being
+   provided this could be made possible. This makes the whole
+   provisioning an easier exercise.
+
+2.1 Pre-requisite is the default routing table configuration
+
+   What is a pre-requisite for this is that the default routing table
+   should be pre-provisioned for connectivity and then the default
+   routing table connectivity be used for provisioning the rest of the
+   VRFs.
+
+   This can be static or done through existing means.
+
+2.1.1 Not all Interfaces need to be configured
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 4]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   It is important to note that there should exist default routing table
+   connectivity with at least one interface for a given neighbor
+   configured through the default routing table. This solves the chicken
+   and egg issue that is rightly raised in this context. Once the
+   default connectivity through the default routing table is established
+   connecting up  the rest of the interfaces and VLANs and their
+   respective VRF configuration becomes conducive in this method.
+
+2.2 Routing and Policy information elements
+
+   A routing and policy construct language could be employed that
+   details out the following information in a construct fashion to the
+   CE from the Provisioning element in the North-south direction.
+
+   Here is the information that needs to be conveyed in this use case.
+
+   a) VLAN identifier (this could be possible be a user driven mnemonic
+   that is translated to a integer suitably arrived at by the
+   Application. The mapping of the user mnemonic to the VLAN integer
+   identifier could be maintained in the Provisioning entity and passed
+   on in the policy construct stream).
+
+   b) Subnets a.k.a IP prefixes and their respective masks that attach
+   to such VLAN identifiers could be then assigned.
+
+   c) Interfaces in the CE that fall within the purview of these subnets
+   could also be specified in this construct.
+
+   d) Interfaces that relate to the CE's south of CE neighbors could be
+   provided with suitable IP addresses from the subnet so assigned by
+   the CE. Interfaces multiple hops away could be specified as well in a
+   fashion that makes it easy to provision for example from an
+   Application that is driven by a Graphical user interface that depicts
+   the topology being provisioned south of the CE.
+
+   e) VRF-Lite identifiers that could be user mnemonics can then be
+   specified with the related subnet information of the VLANs to which
+   they belong to. 
+
+   An assumption here is that devices south of CE could be connected
+   through trunk ports that carry tagged VLAN packets. This can be pre-
+   provisioned ahead of time with the default VLAN identifier say 1
+   being the mode of carriage of the east-west pushed information.
+
+   f) Route leaking constructs for the VRF-Lite identifiers indicating
+   routes that are to be leaked from default to non-default or non-
+   default to non-default and vice-versa can then be specified.
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 5]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   g) Additional policy constructs can then be provisioned that indicate
+   any policy based routing rules that are to be set on the CE or any of
+   the south of CE devices. Here PBR rules are an example. These PBR
+   rules could be per VRF.
+
+   h) The User interface could help define identifiers for each of the
+   routing elements and the policy constructs that are to be configured
+   upon them. 
+
+   The following shows an example of a policy construct language that
+   could be used to define the above elements.
+
+2.1.1 Conveying the provisioning and policy east-west
+
+   The conduit for this policy information from the CE could be through
+   a TCP connection between the Agent on the CE and the Agents on the
+   immediate south of CE devices and from them to Agents on their
+   immediate neighbors and so on.
+
+   The Agents on the south of CE devices could be pre-provisioned with
+   TCP connections between neighbors that need to communicate with each
+   other to serially pass the Provisioning and policy information from
+   one hop to the other. The TCP connections could provide the reliable
+   transport from one hop to the next.
+
+   The Agent on each of the elements should have the ability to parse
+   the constructs and apply the information to appropriate configuration
+   state. They should also pass on the information related to their
+   immediate neighbors through these transport connections without
+   actually having to know that it is intended for their immediate
+   neighbors.
+
+   Transitive property of such transport connections is key to the whole
+   scheme. There could be loops in the topology for redundancy and no
+   tree like structure is assumed from the CE to the south of CE.
+
+   At each hop the information for that node is consumed and extracted
+   out of the content coming over the stream and the rest sent onto the
+   neighbors. This almost resembles reliable flooding of information and
+   dictates that the neighbors drop the duplicate information after
+   voting on the similarity of such information received.
+
+   At the end all nodes would have received information from their
+   immediate neighbors and would have nothing else to pass on. This
+   signals the end of the information  dissemination process.
+
+2.1.2 Centrality of the CE
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 6]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   Thus the information is pushed initially from the Application to the
+   CE and the lateral push southwards indicates that the CE has to get
+   all the information in the first place.  This obviates the need for
+   multiple control connections say from an SDN controller to each of
+   the devices. All the Application has is the connection to the CE.
+
+2.1.3 Use of BGP to convey policy constructs
+
+   Though it is tempting to provide a new protocol for the purpose of
+   such dissemination, the re-use of an existing protocol would be a
+   much better option. Considering the use of BGP for this purpose would
+   be an appropriate decision.
+
+   BGP would have to be extended to convey such constructs and the
+   attribute properties such as transitivity could well be re-used.
+
+2.2 The User Interface
+
+   There exist Graphical Topology based configuration tools that mimic
+   an existing topology and collect attributes and state that need to be
+   configured on each such node in the graphical depiction. Re-using
+   these tools to collect all information from the user with regard to
+   his fitment of which VLAN spans what devices and so on and their
+   separation thereof would be most appropriate. Thus all configuration
+   is collected in a single point of touch with the user and conveyed as
+   a stream of constructs to the CE and from thereon to the south of CE
+   devices.
+
+2.2.1 Redundancy in links
+
+   There could be natural redundancy in the topology all of which could
+   be taken advantage of in such a scenario. Provisioning these links
+   manually first and using the GUI based configuration tool to then
+   push additonal configuration and policy leads to more centralized
+   control and a single point of configuration thrust to the CE alone. 
+
+2.2.2 PE to CE interactions
+
+   The same CAN be said of the PE and the CE and their relationship. The
+   trunk port west from the CE to PE SHOULD be provisioned and its VLAN
+   information and routes COULD be provisioned through the Agent on the
+   CE. Populating the routes in the BGP control plane in the CE from the
+   Application and provisioning policies thereof could be done and the
+   regular BGP interaction with the PE could be relied upon for
+   completing the configuration.
+
+2.2.3 Agents and the BGP control plane
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 7]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   The Agents would then program the BGP control plane in their
+   respective devices. If there occurs a routing failure because of link
+   or node going down the configured state from the lateral interactions
+   is kept in a database that is disjoint from the BGP's RIB. The
+   regular convergence could be relied upon to overcome the failure. On
+   the link or node coming back up this disjoint database could be used
+   to re-populate the BGP RIB.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 8]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+2.2.4 At the CE device
+
+   +***************+   +***************+   +***************+
+   *  Application  *   *  Application  *   *  Application  *
+   +***************+   +***************+   +***************+
+   |  I2RS Client  |           ^                  ^
+   +---------------+           *                  *
+            ^                  *   ****************
+            |                  *   *
+            |                  v   v
+            |           +---------------+
+            |           |  I2RS Client  |
+            |           +---------------+
+            |                   ^
+            |________________   |
+                             |  |  <== I2RS Protocol
+                             |  |
+   --------------------------|--|---------------------------------
+                             v  v                           
+   +*************+     +---------------+      +****************+ .
+   *    Policy   *     |               |      *   Routing  &   * .
+   *   Database  *<***>|  I2RS Agent   |<****>*   Signaling    * .
+   +*************+     |               |      *   Protocols    * .
+                       +---------------+      +****************+ .
+                          ^   ^     ^                  ^         .
+   +*************+        *   *     *                  *         .
+   *  Topology   *        *   *     *                  *         .
+   *  Database   *<*******+   *     *                  v         .
+   +*************+            *     *         +****************+ .
+                              *     +********>*  RIB Manager   * .
+                              *               +****************+ .
+                              *                        ^         .
+                              v                        *         .
+                  +*******************+                *         .
+                  * Subscription &    *                *         .
+                  * Configuration     *                v         .
+                  * Templates for     *       +****************+ .
+                  * Measurements,     *       *  FIB Manager   * .
+                  * Events, QoS, etc. *       *  & Data Plane  * .
+                  +*******************+       +****************+ .
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                 [Page 9]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+2.2.5 CE and South of CE
+
+   Here is a graphical representation of the north-south thrust and the
+   lateral push.
+
+                     (CE) (Agt) <******** (GUI+Controller)
+                    /.   \.
+                   /.     \.
+                  /.        ........>
+              (Agt)        (Agt)   (Agt)
+                 (X1)     (X2) ----> (X3)
+                 /.\._._.  \.
+                /.        \.\.
+             (Agt).........>(Agt)
+              (Y1)----------(Y2)
+                              \.
+                               \. (Agt)
+                               (Z1)
+      *****> North-South Thrust
+      .....> Lateral Push of VRF information (through default RIB).
+      (Agt) -> Agent on the device
+
+   Figure 2 : i2rs Connections between immediate neighbors and
+   corresponding processing and configuration of VRF their subnets and
+   policies.
+
+2.2.6 Configuration / Policy stream in XML
+
+   Note : this contains some introductory text
+
+   Here is a XML layout for defining VRF Lite related configuration for
+   the CE and south of CE neighbors. The entire configuration of the
+   network is specified in this layout.
+
+   VRF lite allows a physical router to partition itself into multiple
+   Virtual Routers (VRs). The control and data plane are isolated in
+   each VR so that traffic does not flow across VRs. VRFs allow multiple
+   instances of a routing table to co-exist within the same router at
+   the same time.
+
+   VRF lite improves functionality by allowing network paths to be
+   segmented without using multiple devices.
+
+
+2.2.6.1 VRF configuration information 
+
+   The layout lays out the attributes about a VRF on a specific router
+   with all the related attributes. The material in XML is self-
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 10]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   explanatory.
+
+   <vrf-info>
+   	<vrf-name>"vrf-string"
+   		<vrf-vlans>"vlan-n,vlan-x.... vlan-z including null set"
+   			<vrf-vlan-interface-id><vlan-interface-identifier>
+   			<associated-config>
+                                     "associated configuration"
+   					<ip-address-and-mask>
+                                                "IP address and mask"
+   					</ip-address-and-mask>
+   					....
+   					....
+   				</associated-config>
+   			</vrf-vlan-interface-id>
+
+
+
+      <vrf-interface-id><physical-or-logical-interface-identifier>
+   		<associated-config>"associated configuration"
+   			<ip-address-and-mask>"IP address and mask"
+   			</ip-address-and-mask>
+   					....
+   					....
+   		</associated-config>
+      </vrf-interface-id>
+
+
+   	</vrf-vlans>
+   	</vrf-name>
+   	<vrf-ospf-configuration>
+   		<process-id>"process-id-number"</process-id>	
+   		<associated-config>"Associated configuration"
+   			....
+   			....
+   		</associated-config>
+   	</vrf-ospf-configuration>
+   </vrf-info>
+
+2.2.6.1.1 Route leaking XML layout
+
+   Route leaking is very often used to provide access of the default
+   routes from non-default VRFs and vice-versa and even between non-
+   default and other non-default VRFs. A classic example is the case of
+   shared VLAN services say VOICE services. In such a case the VOICE
+   VLANs are leaked into other non-default VRFs and access to and from
+   the shared VLANs is facilitated.
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 11]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   <vrf-route-leak>
+   	"vrf-route-leak policy name"
+   	<vrf-name> "VRF name"
+   		<vrf-router-id> | <vrf-router-idees> <router IP address|es>
+
+
+   			<vrf-route-static-leak>
+   			{ configuration for vrf-route-static-leaking }
+   			</vrf-route-static-leak>
+
+
+   			<vrf-route-thru-route-map>
+   			{ configuration for route-map 
+                                related route leaking }
+   			</vrf-route-thru-route-map>
+   			....
+   			....
+   	 	</vrf-router-id>
+   	</vrf-name>
+   </vrf-route-leak>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 12]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+2.2.6.1.2 Policies in VRF Lite
+
+   <open-policy-add>
+   	"Policy MNEMONIC"
+   	<shut-vrf-on-all><vrf-name>
+   	</shut-vrf-on-all>
+
+
+   	<shut-vrf-on-router-id>
+   		"Router IP address signified in default routing table"
+   	</shut-vrf-on-router-id>
+
+
+   	<shut-interface-on-router-id>
+   		"Router IP address"
+   	</shut-interface-on-router-id>
+
+
+   	<move-interface-to-default>
+   		"Interface with Router IP address"
+   	</move-interface-to-default>
+
+
+   	<move-default-to-vrf>
+   		"VRF name"
+   		"Router IP address signified in default routing table"
+   		"New IP address if any"
+   	</move-default-to-vrf>
+
+
+   	<pbr-policy-on-vrf>
+   		"VRF name"
+   		<pbr-policy>
+   			.....
+   		</pbr-policy>
+   	</pbr-policy-on-vrf>	
+
+
+   	<vrf-inject-route>
+   		.....
+   		.....
+   	</vrf-inject-route>
+
+
+   	<vrf-inject-acl>
+   		.....
+   		.....
+   		<action-for-each-acl>
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 13]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   			{ permit | deny }
+   		</action-for-each-acl>
+   	</vrf-inject-acl>
+
+
+   	<vrf-inject-qos-policy>
+   		<vrf-inject-acl>
+   			....
+   		</vrf-inject-acl>
+   		<vrf-inject-qos-action>
+   			<vrf-inject-policer-rate>
+   				{ Rate specifier | Egress shaper }
+   			</vrf-inject-policer-rate>
+   			<action-for-qos>
+   				{ permit | deny | mark down | mark up }
+   			</action-for-qos>
+   		</vrf-inject-qos-action>
+   	</vrf-inject-qos-policy>
+   </open-policy-add>
+
+   <open-policy-remove> "Policy MNEMONIC"
+   	.....
+   	.....
+   </open-policy-remove>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 14]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+2.2.6.1.3 Triggers and event based Policies and configuration
+
+   Events can be used to trigger application or removal of policies in
+   terms of basic configuration , PBR, ACLs, QoS rate policers etc..
+   These triggers could be based on instant of date and/or time, during
+   specific intervals of time in a day or a period of days.
+
+   These triggers can also be triggered based on occurrence of events
+   such as an interface going down or a route going bad or a next-hop
+   becoming unreachable etc.. This is extensible and can be made to
+   cover different kinds of triggers.
+   <open-policy-add-on-event>
+   	"Policy MNEMONIC"
+   	....
+   	....
+   	<event-add>
+   		<event-on-time>
+   			"Date and Time specification"
+   		</event-on-time>
+   		<event-for-duration>
+   			"Duration of Policy"
+   		</event-for-duration>
+
+
+   		<event-on-trigger>
+   			<trigger-on-NH-DOWN>
+   				"Next hop specification"
+   			</trigger-on-NH-DOWN>
+   			<trigger-on-route-withdraw>
+   				"Route prefix and mask"
+   			</trigger-on-route-withdraw>
+   			<trigger-on-ECMP-available>
+   				"Prefix and mask for which ECMP is available"
+   			</trigger-on-ECMP-available>
+   			.....
+   			.....
+   			Other event based triggers
+   		</event-on-trigger>
+
+
+   	<event-add>
+   	
+   	<event-remove>
+   		....
+   		....
+   	</event-remove>
+
+   	<event-modify>
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 15]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   		....
+   		....
+   	</event-modify>
+   </open-policy-add-on-event>
+
+
+2.2.6.2 Policy Based Routing and others
+
+   Policy-based routing enables you to make routing decisions based on
+   policies applied to a specific interface. When a router receives a
+   packet it normally decides where to forward it based on the
+   destination address in the packet. This destination IP address is
+   used to look up an entry in the routing table. However, in some cases
+   there may be a need to forward the packet based on other criteria:
+   size, source, protocol type, destination etc... For example, a
+   network administrator might want to forward a packet that uses TCP
+   across a different next-hop than packets that contain ICMP.
+
+   Rules for PBR can also be a combination of things: When the packet
+   comes from this source and wants to go to that destination then route
+   it to this next-hop or onto that specific interface. This permits
+   routing over different links or towards different networks even while
+   the destination is the same but depending on what the source IP
+   address is i.e where the packet originates.
+
+   Normally in most routers to enable a PBR rule you would create a
+   Redirect list. Redirect lists are defined by rules or routing
+   policies. The following parameters can be defined in the routing
+   policy or rules :
+
+   * IP address of the forwarding router (next-hop IP address)
+   * Protocol as defined in the header
+   * Source IP address and mask
+   * Destination IP address and mask
+   * Source Port
+   * Destination Port
+   * TCP Flags
+   * DSCP settings in the packet
+   * TTL setttings in the packet
+   * L2 COS packet
+   * L2 source MAC address
+   * L2 destination MAC address
+
+   Once a redirect-list is applied to an interface, all traffic passing
+   through it is subjected to the rules defined in the redirect-list.
+
+   The traffic is forwarded based on the following :
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 16]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   * Next-hop addresses are verified. If the specified next hop is
+   reachable the traffic is forwarded to the specified next-hop
+
+   * If the specified next-hops are not reachable, then the normal
+   routing table is used to forward traffic.
+
+   * If the specified next-hops are not reachable, there may be a
+   fallback next-hop that may be configured.
+
+   * Some NOSs support multiple next-hop entries in their redirect
+   lists. Multiple next-hops could be mapped to ECMP next-hops.
+
+   * Redirect-lists are applied at the ingress.
+
+   * Fallback ECMP next-hops can also be specified and in that case if
+   the first set of next-hops are not reachable then the fallback ECMP
+   set is chosen. This can be explicitly stated.
+
+   Policy settings and rules can make use of Non-Contiguous bitmasks for
+   PBR.
+
+   Non-contiguous bitmasks for PBR allows more granular and flexible
+   control over routing policies. Network addresses that are in the
+   middle of a subnet can be included or excluded.
+
+   Specific bitmasks can be entered using the dotted decimal format.
+
+   Force10# show ip redirect-list
+
+   IP Redirect-list rc10:
+   Defined as:                       (non-contiguous bitmask)
+                                           |
+                                           V
+     seq 5 permit ip 200.200.200.200 200.200.200.200 199.199.199.199
+   199.199.199.199
+     seq 10 redirect 1.1.1.2 tcp 234.224.234.234 255.234.234.234
+   222.222.222.222/24 eq 40 ack, Next-hop reachable
+   (via Gi 8/1), ARP resolved
+   Applied Interfaces :
+     Gi 8/0
+
+   Ingress and egress Hot Lock PBR allow one to add or delete new rules
+   into an existing policy (already written into the CAM) without
+   disruption of traffic flow. Existing entries in CAM are adjusted to
+   accomodate the new entries. All such policies affecting the CAM can
+   be entered using this Hot Lock PBR facility.
+
+   <redirect-list>
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 17]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   	<redirect-list-name><rule-name>
+   		<redirect-list-rule-number><number>
+   			<redirect-list-rule>
+   			<seq redirect {ip-address} 
+                               {ip-protocol-number | 
+                                ip-protocol-type [bit]}
+   		               {source mask | any | 
+                                   host ip-address} {destination mask | 
+                                    any | host ip-address}
+   			</redirect-list-rules>
+   		</redirect-list-rule-number> 	
+   	</redirect-list-name>
+   </redirect-list>
+   	
+   Sample 
+
+   <redirect-list>
+   	<redirect-list-name><sample-rule>
+   		<redirect-list-rule-number><1>
+   			<redirect-list-rule>
+   			<seq 1 redirect 3.3.3.3 
+                               ip host 222.1.1.1 host 77.1.1.1>
+   			</redirect-list-rule>
+   		</redirect-list-rule-number>
+   	</redirect-list-name>
+   </redirect-list>
+
+   One can use the command permit to create an exception to a redirect
+   list. Exceptions are used when a forwarding decision should be based
+   on the routing table than a routing policy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 18]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+2.2.6.3 Language Constructs translated to XML
+
+   The above XML specification may be cumbersome to lay out. For this
+   purpose general purpose language constructs such as the following can
+   be employed.
+
+   A sample language construct and its corresponding XML layout is
+   denoted below.
+
+   APPLY VRF "red"
+   	ROUTER-ID 21.1.1.1
+   	VRF-VLANs 100,101,102,103
+   	   VLAN-SVI 100
+               APPLY IP-ADDRESS 100.100.100.100 /24
+   	   VLAN-SVI 101 
+               APPLY IP-ADDRESS 100.100.200.100 /24
+   		...
+   		...
+   	VRF-INTERFACE TenGig 0/0
+   		APPLY IP-ADDRESS 100.100.500.1 /24
+
+   	ROUTE-LEAK VRF "shared-services"
+   	POLICY "route-leak-for-voice"
+   		APPLY POLICY "route-leak-for-voice" 
+   		EVENT "event-VOICE" from "Jan 10 2013 to 
+                            Feb 28 2013 - 9:00 AM to 5:00 PM"
+   		STATIC FROM VRF "default" 
+   		ROUTE 21.2.2.0 /24 NEXT-HOP 21.1.1.15 
+   		ROUTE 31.2.2.0 /24 NEXT-HOP 21.1.1.15 
+   		ROUTE 41.2.2.0 /24 NEXT-HOP 21.1.1.15 
+   		REMOVE POLICY WHEN-DONE
+   	END ROUTE-LEAK
+   END-APPLY VRF
+   					
+2.2.6.3.1 Corresponding XML construct as translated
+
+   The following XML layout is what is derived from the language
+   construct above.
+
+   <vrf-info>
+   <vrf-name> "red"
+   	<router-identifier> 21.1.1.1 /* Default routing table */
+   	<vrf-vlan-identifiers> 100,101,102,103
+   	<vrf-vlan-interface-identifier> 100
+   	<ip-address> 100.100.100.100 255.255.255.0
+   	<ip-address> 100.100.200.100 255.255.255.0
+         </vrf-vlan-interface-identifier>
+   	</vrf-vlan-identifiers>
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 19]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   	<vrf-interface-identifier> TenGig 0/0
+   	<ip-address> 100.100.500.1 255.255.255.0
+   	</vrf-interface-identifier>
+   		
+   		<vrf-add-policy> "route-leak-for-voice"
+   		<vrf-add-policy-on-event> "event-VOICE"
+   		<trigger-add-for-interval>
+   		<duration-from> Jan 10 2013 </duration-from>
+   		<duration-to> Feb 28 2013 </duration-to>
+   		<time-start> 9:00 AM </time-start>
+   		<time-end>   5:00 PM </time-end>
+   		/* remove when time-end is reached */
+   		<trigger-action>
+   		<vrf-route-leak-from> "shared services"
+   		<route-leak> 
+   			21.2.2.0 255.255.255.0 next-hop 21.1.1.15
+   			31.2.2.0 255.255.255.0 next-hop 21.1.1.15
+   			41.2.2.0 255.255.255.0 next-hop 21.1.1.15
+   		</route-leak>
+   		</trigger-action>
+   		</trigger-add-for-interval>
+   		</vrf-add-policy-on-event>
+   		</vrf-add-policy>
+   	</vrf-name>
+   </vrf-info>
+
+2.2.6.3.2 Some more policy examples
+
+
+   a) PBR configuration based on non-reachability of a next hop
+
+
+      APPLY VRF "red"
+      	ROUTER-ID 21.1.1.1
+      	VRF-VLANs 100,101,102,103
+      	   VLAN-SVI 100
+                  APPLY IP-ADDRESS 100.100.100.100 /24
+      	   VLAN-SVI 101 
+                  APPLY IP-ADDRESS 100.100.200.100 /24
+      		...
+      		...
+      	VRF-INTERFACE TenGig 0/0
+      		APPLY IP-ADDRESS 100.100.500.1 /24
+
+      	POLICY "protect-for-voice"
+      		APPLY POLICY "protect-for-voice" 
+
+   		/* APPLY ROUTE-LEAK POLICY */
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 20]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+   		PERFORM ROUTE-LEAK "shared-services"
+
+   		/* Instantiate BFD sessions for interface/IP */
+
+   		BFD-PROTECT 21.1.1.15 ON INTERFACE TenGig 0/1
+
+      		EVENT "NH-DOWN-VOICE" when NH-DOWN IS 21.1.1.15
+
+   			PBR-ROUTE 21.2.2.0 /24 NEXT-HOP 23.1.1.15 
+   			PBR-ROUTE 31.2.2.0 /24 NEXT-HOP 23.1.1.15 
+   			PBR-ROUTE 41.2.2.0 /24 NEXT-HOP 23.1.1.15 
+
+      		REMOVE POLICY WHEN-NH-UP
+      	END POLICY
+      END-APPLY VRF
+
+
+
+   b) PBR configuration based on withdraw of a route
+
+      APPLY VRF "red"
+      	ROUTER-ID 21.1.1.1
+      	VRF-VLANs 100,101,102,103
+      	   VLAN-SVI 100
+                  APPLY IP-ADDRESS 100.100.100.100 /24
+      	   VLAN-SVI 101 
+                  APPLY IP-ADDRESS 100.100.200.100 /24
+      		...
+      		...
+      	VRF-INTERFACE TenGig 0/0
+      		APPLY IP-ADDRESS 100.100.500.1 /24
+
+      	POLICY "protect-for-voice"
+      		APPLY POLICY "protect-for-voice" 
+
+   		/* APPLY ROUTE-LEAK POLICY */
+   		PERFORM ROUTE-LEAK "shared-services"
+
+   		/* Instantiate BFD sessions for interface/IP */
+
+   		BFD-PROTECT 21.1.1.15 ON INTERFACE TenGig 0/1
+
+      		EVENT "rt-down-VOICE" when ROUTE-DOWN IS 21.2.2.0
+
+   			PBR-ROUTE 52.2.2.0 /24 NEXT-HOP 24.1.1.15 
+
+      		DONT REMOVE POLICY WHEN-ROUTE-UP
+      	END POLICY
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 21]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+      END-APPLY VRF
+
+2.2.6.4 Application overlay over this infrastructure
+
+   It is imperative that even higher level applications are created in a
+   more general form of a construct such as follows.
+
+
+   Deploy VRF "blue" 
+
+   	VLANs in "blue"
+   		100,101,102,104
+   	Router-IDs XONE,YTWO, ZTHREE, AFOUR
+
+   	TOPO CONSTRUCT "blue-topo"
+
+   		XONE -> YTWO
+   		YTWO -> ZTHREE
+   		ZTHREE -> AFOUR
+   		AFOUR -> XONE
+
+   	MAP VLANs TO TOPO CONSTRUCT "blue-topo"
+
+   	MAP IP-SUBNETs to VLANS in "blue"
+
+   		121.1.1.0 /24 VLAN 100
+   		122.1.1.0 /24 VLAN 101
+   		123.1.1.0 /24 VLAN 102
+   		124.1.1.0 /24 VLAN 104
+
+   	PERFORM VRF "blue"
+
+   	deploy VRF-Lite using a higher level language construct.
+
+   EndDeploy
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 22]
+
+INTERNET DRAFT         VRF-Lite Use case for I2RS          April 3, 2013
+
+
+3  Security Considerations
+
+   Suitable security for the transport connections in the east-west
+   direction is provided by similar means as in the north-south
+   direction between the application and the CE device.
+
+
+4  IANA Considerations
+
+   Based on extensions to be proposed for the BGP protocol for carrying
+   the Provisioning and Policy information, IANA considerations need to
+   be asked. The actual Protocol extensions will be dealt with in the
+   future versions of this document.
+
+
+5  References
+
+5.1  Normative References
+
+
+5.2  Informative References
+
+
+
+Authors' Addresses
+
+
+   Balaji Venkat Venkataswami
+   Chennai 600084
+   Tamilnadu
+   India
+
+   EMail: balajivenkat299@gmail.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Balaji Venkataswami     Expires October 5, 2013                [Page 23]
